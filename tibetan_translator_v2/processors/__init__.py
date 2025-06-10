@@ -1,16 +1,15 @@
-"""
-Processors for the Tibetan Translator v2 pipeline.
-"""
+# __init__.py for tibetan_translator/processors package
 
-from .input_processor import InputProcessor
-from .content_generator import ContentGenerator
-from .output_processor import OutputProcessor
-from .pipeline import TranslationPipeline, process_multilevel_tree_file
+from tibetan_translator.processors.commentary import *
+from tibetan_translator.processors.translation import *
+from tibetan_translator.processors.evaluation import *
+from tibetan_translator.processors.formatting import *
+from tibetan_translator.processors.glossary import *
 
 __all__ = [
-    "InputProcessor",
-    "ContentGenerator", 
-    "OutputProcessor",
-    "TranslationPipeline",
-    "process_multilevel_tree_file"
+    "commentary",
+    "translation",
+    "evaluation",
+    "formatting",
+    "glossary"
 ]

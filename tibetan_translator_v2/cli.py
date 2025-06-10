@@ -15,20 +15,20 @@ def run(data, batch_size=4, run_name="run1", preprocess=False):
     """
     examples = []
     if preprocess:
-        for i in tqdm(data, desc="Creating input dictionaries"):
+        for i in tqdm(data, desc="Creating input dictionaries for V2"):
             examples.append({
-                "source": i["root"],
-                "sanskrit": i["sanskrit"],
-                "commentary1": i.get("commentary_1", ""),
-                "commentary2": i.get("commentary_2", ""),
-                "commentary3": i.get("commentary_3", ""),
+                "source": i.get("root", ""),
+                "sanskrit": i.get("sanskrit", ""),
+                "ucca": i.get("ucca", ""),
+                "word_by_word": i.get("word_by_word", ""),
+                "multilevel_summary": i.get("multilevel_summary", ""),
                 "feedback_history": [],
                 "format_feedback_history": [],
                 "itteration": 0,
                 "format_iteration": 0,
                 "formated": False,
                 "glossary": [],
-                "language": "English"
+                "language": i.get("language", "English")
             })
     else:
         examples = data

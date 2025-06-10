@@ -4,7 +4,7 @@ import pandas as pd
 from typing import List, Any
 from tibetan_translator.models import State, GlossaryEntry, GlossaryExtraction
 from tibetan_translator.prompts import get_glossary_extraction_prompt
-from tibetan_translator.utils import llm, logger
+from tibetan_translator.utils import llm, logger, GLOSSARY_CSV_PATH, llm_thinking
 
 # Create glossary-specific logger
 glossary_logger = logging.getLogger("tibetan_translator.glossary")
@@ -227,28 +227,50 @@ def generate_glossary_csv(entries: List[GlossaryEntry], filename: str = "transla
         return filename
 
 
+def initialize_glossary_file():
+    # If the file is empty, write the header
+    with open(GLOSSARY_CSV_PATH, 'a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(["tibetan_term", "translation", "description", "entity_category", "category"])
+
+
+def append_to_glossary(entries: List[GlossaryEntry]):
+    # Open the CSV file in append mode
+    with open(GLOSSARY_CSV_PATH, 'a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        # Add each new entry to the CSV
+        for entry in entries:
+            writer.writerow([
+                entry.tibetan_term,
+                entry.translation,
+                entry.description,
+                entry.entity_category,
+                entry.category
+            ])
+
+
 def generate_glossary(state: State):
-    """Generate glossary and save to CSV."""
-    glossary_logger.info(f"Generating glossary for language: {state.get('language', 'English')}")
+    """
+    Extracts glossary from the word-by-word translation, saves it to CSV, and updates the state.
+    """
+    # Get the target language, default to English
+    language = state.get('language', 'English')
     
-    try:
-        # Extract glossary entries
-        entries = extract_glossary(state)
-        glossary_logger.info(f"Extracted {len(entries)} glossary entries")
-        
-        # Generate CSV file
-        filename = generate_glossary_csv(entries)
-        glossary_logger.info(f"Saved glossary to {filename}")
-        
-        # Make sure to preserve plaintext_translation in the return state
-        return {
-            "glossary": entries,
-            "plaintext_translation": state.get("plaintext_translation", "")
-        }
-    except Exception as e:
-        glossary_logger.error(f"Error in generate_glossary: {str(e)}")
-        # Return empty glossary to prevent workflow failures
-        return {
-            "glossary": [],
-            "plaintext_translation": state.get("plaintext_translation", "")
-        }
+    # Generate the prompt using the word_by_word field
+    prompt = get_glossary_extraction_prompt(
+        word_by_word_translation=state['word_by_word'],
+        language=language
+    )
+    
+    # Use the 'thinking' LLM for better analysis and structured output
+    glossary_extraction = llm_thinking.with_structured_output(GlossaryExtraction).invoke(prompt)
+    
+    # Ensure the glossary file is initialized with a header
+    initialize_glossary_file()
+    
+    # Append the new entries to the CSV file
+    if glossary_extraction.entries:
+        append_to_glossary(glossary_extraction.entries)
+    
+    # Return the updated state with the new glossary entries
+    return {"glossary": glossary_extraction.entries}

@@ -1,58 +1,19 @@
-"""
-Tibetan Translator v2 Pipeline
+# __init__.py for tibetan_translator package
 
-A translation pipeline for processing multi-level-tree.jsonl input format
-and generating translations and glossaries in multiple languages.
+from tibetan_translator.config import *
+from tibetan_translator.utils import *
+from tibetan_translator.workflow import optimizer_workflow
+from tibetan_translator.processors.commentary import *
+from tibetan_translator.processors.translation import *
+from tibetan_translator.processors.evaluation import *
+from tibetan_translator.processors.formatting import *
+from tibetan_translator.processors.glossary import *
 
-This pipeline is designed to work with:
-- Glossary (raw text)
-- UCCA formatted linguistic analysis (raw text)  
-- Multilevel summary (JSON converted to hierarchical text)
-"""
-
-from .models import (
-    MultiLevelTreeInput,
-    ProcessingRequest, 
-    ProcessingResult,
-    TranslationResult,
-    GlossaryEntry,
-    WorkflowState
-)
-
-from .processors.pipeline import (
-    TranslationPipeline,
-    process_multilevel_tree_file
-)
-
-from .processors.input_processor import InputProcessor
-from .processors.content_generator import ContentGenerator
-from .processors.output_processor import OutputProcessor
-
-from .prompts import (
-    get_multilevel_translation_prompt,
-    get_glossary_extraction_prompt
-)
-
-__version__ = "2.0.0"
 __all__ = [
-    # Models
-    "MultiLevelTreeInput",
-    "ProcessingRequest", 
-    "ProcessingResult",
-    "TranslationResult",
-    "GlossaryEntry",
-    "WorkflowState",
-    
-    # Main Pipeline
-    "TranslationPipeline",
-    "process_multilevel_tree_file",
-    
-    # Processors
-    "InputProcessor",
-    "ContentGenerator", 
-    "OutputProcessor",
-    
-    # Prompts
-    "get_multilevel_translation_prompt",
-    "get_glossary_extraction_prompt"
+    "optimizer_workflow",
+    "commentary",
+    "translation",
+    "evaluation",
+    "formatting",
+    "glossary"
 ]

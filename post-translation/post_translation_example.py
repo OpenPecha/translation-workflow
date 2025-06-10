@@ -21,7 +21,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import post-translation module
-from tibetan_translator.processors.post_translation import (
+from tibetan_translator_v2.processors.post_translation import (
     post_process_corpus,
     analyze_term_frequencies,
     generate_standardization_examples,

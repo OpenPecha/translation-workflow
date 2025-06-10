@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 from tibetan_translator.models import State
 from tibetan_translator.processors.commentary import (
-    commentary_translator_1, commentary_translator_2, commentary_translator_3, aggregator
+    process_ucca, process_word_by_word, process_multilevel_summary, aggregator
 )
 from tibetan_translator.processors.translation import translation_generator, route_translation
 from tibetan_translator.processors.evaluation import llm_call_evaluator
@@ -14,9 +14,9 @@ from tibetan_translator.processors.glossary import generate_glossary
 optimizer_builder = StateGraph(State)
 
 # Add processing nodes
-optimizer_builder.add_node("commentary_translator_1", commentary_translator_1)
-optimizer_builder.add_node("commentary_translator_2", commentary_translator_2)
-optimizer_builder.add_node("commentary_translator_3", commentary_translator_3)
+optimizer_builder.add_node("process_ucca", process_ucca)
+optimizer_builder.add_node("process_word_by_word", process_word_by_word)
+optimizer_builder.add_node("process_multilevel_summary", process_multilevel_summary)
 optimizer_builder.add_node("aggregator", aggregator)
 optimizer_builder.add_node("translation_generator", translation_generator)
 optimizer_builder.add_node("llm_call_evaluator", llm_call_evaluator)
@@ -26,12 +26,12 @@ optimizer_builder.add_node("generate_glossary", generate_glossary)
 # optimizer_builder.add_node("formater", formater)
 
 # Define workflow edges
-optimizer_builder.add_edge(START, "commentary_translator_1")
-optimizer_builder.add_edge(START, "commentary_translator_2")
-optimizer_builder.add_edge(START, "commentary_translator_3")
-optimizer_builder.add_edge("commentary_translator_1", "aggregator")
-optimizer_builder.add_edge("commentary_translator_2", "aggregator")
-optimizer_builder.add_edge("commentary_translator_3", "aggregator")
+optimizer_builder.add_edge(START, "process_ucca")
+optimizer_builder.add_edge(START, "process_word_by_word")
+optimizer_builder.add_edge(START, "process_multilevel_summary")
+optimizer_builder.add_edge("process_ucca", "aggregator")
+optimizer_builder.add_edge("process_word_by_word", "aggregator")
+optimizer_builder.add_edge("process_multilevel_summary", "aggregator")
 optimizer_builder.add_edge("aggregator", "translation_generator")
 optimizer_builder.add_edge("translation_generator", "llm_call_evaluator")
 

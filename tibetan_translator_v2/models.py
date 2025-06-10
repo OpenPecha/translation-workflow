@@ -1,21 +1,30 @@
 import json
 import logging
-from typing import List, Literal, TypedDict, Any, Union, Dict, Optional
+from typing import List, Literal, TypedDict, Any, Union
 from pydantic import BaseModel, Field, field_validator
-from dataclasses import dataclass
 
 # Setup model-specific logger
 logger = logging.getLogger("tibetan_translator.models")
 
+class CommentaryVerification(BaseModel):
+    matches_commentary: bool = Field(
+        description="Whether the translation fully aligns with all key points from the commentary",
+    )
+    missing_concepts: str = Field(
+        description="List of concepts from commentary that are missing or incorrectly translated",
+    )
+    misinterpretations: str = Field(
+        description="List of any concepts that were translated in ways that contradict the commentary",
+    )
+    context_accuracy: str = Field(
+        description="Verification of key contextual elements mentioned in commentary",
+    )
 
-
-# Add new model for glossary entries
 class GlossaryEntry(BaseModel):
     tibetan_term: str = Field(description="Original Tibetan term")
     translation: str = Field(description="Exact translation used in the target language")
-    context: str = Field(description="Context or usage notes in the target language")
+    description: str = Field(description="A concise description of the term's meaning and significance in a Buddhist context.")
     entity_category: str = Field(description="Entity category (e.g., person, place, etc.) in the target language, if not entity then leave it blank")
-    commentary_reference: str = Field(description="Reference to commentary explanation in the target language")
     category: str = Field(description="Term category (philosophical, technical, etc.) in the target language")
 
 class GlossaryExtraction(BaseModel):
@@ -67,151 +76,73 @@ class LanguageCheck(BaseModel):
         default="",
     )
 
+class Feedback(BaseModel):
+    is_target_language: bool = Field(
+        description="Whether the translation is actually in the specified target language",
+        default=True,
+    )
+    language_issues: str = Field(
+        description="Description of any issues with the target language if not in target language",
+        default="",
+    )
+    grade: Literal["bad", "okay", "good", "great"] = Field(
+        description="Evaluate translation quality based on accuracy and commentary alignment",
+    )
+    feedback: str = Field(
+        description="Detailed feedback on improving translation based on commentary interpretation",
+    )
+    format_matched: bool = Field(
+        description="Whether the translation structure matches the source structure (line count, verse form, paragraph breaks)",
+        default=False,
+    )
+    format_issues: str = Field(
+        description="Specific formatting issues to address (if any)",
+        default="",
+    )
 
+class Translation_extractor(BaseModel):
+    extracted_translation: str = Field("extracted translation with exact format from the Respond")
 class Translation(BaseModel):
     format_matched: bool = Field(
         description="Evaluate if translation preserves source text's formatting such as linebreaks",
     )
-    plaintext_translation: str = Field("Exact Plaintext translation in key plaintext_translation: '' ")
-    translation : str = Field("Exact Translation text in key translation: '' ")
+    extracted_translation: str = Field(
+        description="The translation maintaining all original formatting",
+    )
+    feedback_format: str = Field(
+        description="Detailed guidance on matching source text formatting and only the formating",
+    )
 
 
+class KeyPoint(BaseModel):
+    concept: str = Field(description="Core concept or interpretation")
+    terminology: List[str] = Field(description="Required terminology")
+    context: str = Field(description="Required contextual information")
+    implications: List[str] = Field(description="Philosophical implications")
 
+class CommentaryPoints(BaseModel):
+    points: List[KeyPoint] = Field(description="List of key points from commentary")
 
 
 class State(TypedDict):
-    translation: str
+    translation: List[str]
     source: str
-    language: str 
-    plaintext_translation: str 
-    ucca : str
-    word_by_word_translation: str
-    itteration: int 
+    sanskrit: str
+    language: str
+    feedback_history: List[str]
+    format_feedback_history: List[str]
+    
+    # New V2 inputs
+    ucca: str
+    word_by_word: str
+    multilevel_summary: str
+    
+    # Combined commentary from V2 inputs
+    combined_commentary: str
+    
+    key_points: List[KeyPoint] # May be repurposed or removed later
+    plaintext_translation: str  
+    itteration: int  # For translation quality improvement iterations
+    format_iteration: int  # For formatting correction iterations
     formated: bool
     glossary: List[GlossaryEntry]
-    plaintext_translation: str
-    multilevel_summary: str
-
-
-@dataclass
-class MultiLevelTreeInput:
-    """
-    Input model for multi-level-tree.jsonl format.
-    Contains three main components: glossary, ucca_formatted, and multilevel_summary.
-    """
-    glossary: str  # Raw text string
-    ucca_formatted: str  # Raw text string 
-    multilevel_summary: Dict[str, Any]  # JSON structure to be converted to text
-    
-    def _json_to_text(self, obj: Any, indent: int = 0) -> str:
-        """
-        Convert JSON object to hierarchical text format without quotes on keys.
-        
-        Args:
-            obj: JSON object to convert
-            indent: Current indentation level
-            
-        Returns:
-            String representation of the JSON in hierarchical text format
-        """
-        if isinstance(obj, dict):
-            lines = []
-            for key, value in obj.items():
-                prefix = "  " * indent
-                if isinstance(value, (dict, list)):
-                    lines.append(f"{prefix}{key}:")
-                    lines.append(self._json_to_text(value, indent + 1))
-                else:
-                    lines.append(f"{prefix}{key}: {value}")
-            return "\n".join(lines)
-        elif isinstance(obj, list):
-            lines = []
-            for i, item in enumerate(obj):
-                prefix = "  " * indent
-                if isinstance(item, (dict, list)):
-                    lines.append(f"{prefix}- Item {i+1}:")
-                    lines.append(self._json_to_text(item, indent + 1))
-                else:
-                    lines.append(f"{prefix}- {item}")
-            return "\n".join(lines)
-        else:
-            return str(obj)
-    
-    def get_multilevel_summary_text(self) -> str:
-        """
-        Convert multilevel_summary JSON to text format.
-        
-        Returns:
-            Text representation of the multilevel summary
-        """
-        return self._json_to_text(self.multilevel_summary)
-
-
-@dataclass
-class ProcessingRequest:
-    """
-    Request model for processing multi-level tree input.
-    """
-    input_data: MultiLevelTreeInput
-    target_languages: list[str]
-    source_text: Optional[str] = None  # Original source text if available
-
-
-@dataclass
-class TranslationResult:
-    """
-    Result model for a single language translation.
-    """
-    language: str
-    format_matched: bool
-    plaintext_translation: str
-    translation: str
-
-
-@dataclass
-class GlossaryEntry:
-    """
-    Model for individual glossary entries.
-    """
-    tibetan_term: str
-    translation: str
-    context: str
-    commentary_reference: str
-    category: str
-    entity_category: str
-
-
-@dataclass
-class ProcessingResult:
-    """
-    Complete processing result containing translations and glossaries for all languages.
-    """
-    request_id: str
-    translations: Dict[str, TranslationResult]  # language -> translation result
-    glossaries: Dict[str, list[GlossaryEntry]]  # language -> glossary entries
-    source_components: Dict[str, str]  # Components used in processing
-    
-    def __post_init__(self):
-        """Initialize empty dictionaries if not provided."""
-        if not self.translations:
-            self.translations = {}
-        if not self.glossaries:
-            self.glossaries = {}
-        if not self.source_components:
-            self.source_components = {}
-
-
-@dataclass 
-class WorkflowState:
-    """
-    State model for the processing workflow.
-    """
-    request: ProcessingRequest
-    result: ProcessingResult
-    current_step: str = "initialized"
-    errors: list[str] = None
-    
-    def __post_init__(self):
-        """Initialize empty errors list if not provided."""
-        if self.errors is None:
-            self.errors = []
