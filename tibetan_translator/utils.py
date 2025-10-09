@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 # Import configuration - this will load environment variables from .env
 from tibetan_translator.config import LLM_MODEL_NAME, MAX_TOKENS
+from tibetan_translator.llm_provider import MultiProviderLLM
 
 # Setup logging - file only to avoid interfering with tqdm progress bars
 logging.basicConfig(
@@ -486,14 +487,22 @@ COMMENTARIES:
     return messages
 
 
-# Initialize standard LLM instance 
-llm = ChatAnthropic(model=LLM_MODEL_NAME, max_tokens=MAX_TOKENS)
+# Initialize multi-provider LLMs with token-bucket and fallback
+llm = MultiProviderLLM(
+    provider_order=None,  # from env LLM_PROVIDER_ORDER or default
+    model_names=None,     # from env or defaults
+    max_tokens=MAX_TOKENS,
+    temperature=float(os.getenv('LLM_TEMPERATURE', '0.0')),
+)
 
-# Initialize LLM instance with thinking capability for complex reasoning tasks
-llm_thinking = ChatAnthropic(
-    model="claude-3-7-sonnet-latest",
+# Thinking-capable model; Anthropic supports thinking, Gemini will ignore
+llm_thinking = MultiProviderLLM(
+    provider_order=None,
+    model_names=None,
     max_tokens=5000,
-    thinking={"type": "enabled", "budget_tokens": 2000},
+    temperature=float(os.getenv('LLM_TEMPERATURE', '0.0')),
+    thinking_enabled=True,
+    thinking_budget_tokens=int(os.getenv('THINKING_BUDGET_TOKENS', '2000')),
 )
 
 def dict_to_text(d, indent=0):

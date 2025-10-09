@@ -6,7 +6,7 @@
 # 2. Post-translation processing (terminology standardization & word-by-word translation)
 
 # Load environment variables
-source .env 2>/dev/null || (echo "Warning: .env file not found. Please set ANTHROPIC_API_KEY manually.")
+source .env 2>/dev/null || (echo "Warning: .env file not found. Please set ANTHROPIC_API_KEY or GOOGLE_API_KEY manually.")
 
 # Default values
 INPUT_FILE="input/choenjuk_bo.json"
@@ -15,6 +15,10 @@ BATCH_SIZE=10
 MAX_RETRIES=3
 RETRY_DELAY=5
 OUTPUT_PREFIX="choenjuk_zh"
+PROVIDERS="anthropic,google" # provider fallback order
+LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.0}
+TPM_ANTHROPIC=${TPM_ANTHROPIC:-50000}
+TPM_GOOGLE=${TPM_GOOGLE:-60000}
 
 # Color codes for pretty output
 GREEN='\033[0;32m'
@@ -49,6 +53,22 @@ while [[ $# -gt 0 ]]; do
       OUTPUT_PREFIX="$2"
       shift 2
       ;;
+    --providers)
+      PROVIDERS="$2" # e.g. "google,anthropic"
+      shift 2
+      ;;
+    --temperature)
+      LLM_TEMPERATURE="$2"
+      shift 2
+      ;;
+    --tpm-anthropic)
+      TPM_ANTHROPIC="$2"
+      shift 2
+      ;;
+    --tpm-google)
+      TPM_GOOGLE="$2"
+      shift 2
+      ;;
     --debug)
       DEBUG_FLAG="--debug"
       shift
@@ -62,6 +82,10 @@ while [[ $# -gt 0 ]]; do
       echo "  --retries NUM       Number of retry attempts for failed batches"
       echo "  --delay SECONDS     Delay between retry attempts"
       echo "  --output PREFIX     Output file prefix"
+      echo "  --providers ORDER   Comma-separated provider order (anthropic,google)"
+      echo "  --temperature NUM   LLM sampling temperature (default 0.0)"
+      echo "  --tpm-anthropic N   Anthropic tokens/min budget (default 50000)"
+      echo "  --tpm-google N      Google tokens/min budget (default 60000)"
       echo "  --debug             Enable debug logging"
       echo "  --help              Show this help message"
       exit 0
@@ -74,12 +98,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Check for required environment variables
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-  echo "Error: ANTHROPIC_API_KEY environment variable not set"
-  echo "Please set it in .env file or export it manually"
+# Check for at least one provider key
+if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$GOOGLE_API_KEY" ]; then
+  echo "Error: neither ANTHROPIC_API_KEY nor GOOGLE_API_KEY is set"
+  echo "Provide at least one to proceed."
   exit 1
 fi
+
+# Export provider config for the Python side
+export LLM_PROVIDER_ORDER="$PROVIDERS"
+export LLM_TEMPERATURE
+export TPM_ANTHROPIC
+export TPM_GOOGLE
 
 # Create output directory if it doesn't exist
 mkdir -p outputs
@@ -88,6 +118,7 @@ echo -e "${BLUE}======= Tibetan Buddhist Translation System =======${NC}"
 echo -e "${BLUE}Input file:${NC} $INPUT_FILE"
 echo -e "${BLUE}Target language:${NC} $LANGUAGE"
 echo -e "${BLUE}Batch size:${NC} $BATCH_SIZE"
+echo -e "${BLUE}Providers:${NC} $PROVIDERS"
 
 # Phase 1: Initial Translation
 echo -e "\n${GREEN}===== Phase 1: Initial Translation =====${NC}"
